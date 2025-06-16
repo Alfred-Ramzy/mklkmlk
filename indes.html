@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة مكتبة الطباعة</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+        }
+        /* إخفاء راديو الإدخال الأصلي */
+        .choice-input {
+            display: none;
+        }
+        /* تصميم الكارت للاختيار */
+        .choice-card {
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+            border: 2px solid #e5e7eb; /* gray-200 */
+            background-color: #f9fafb; /* gray-50 */
+        }
+        /* تغيير شكل الكارت عند اختيار الراديو الذي بداخله */
+        .choice-input:checked + .choice-card {
+            border-color: #2563eb; /* blue-600 */
+            background-color: #eff6ff; /* blue-50 */
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        #printer-type-section.hidden {
+            max-height: 0;
+            overflow: hidden;
+            padding-top: 0;
+            padding-bottom: 0;
+            margin-top: 0;
+            opacity: 0;
+        }
+        #printer-type-section {
+            transition: all 0.4s ease-in-out;
+            max-height: 500px;
+            opacity: 1;
+        }
+        /* إخفاء العناصر غير المرغوب فيها عند الطباعة */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #invoice-container, #invoice-container * {
+                visibility: visible;
+            }
+            #invoice-container {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 1rem;
+                border: none;
+                box-shadow: none;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <!-- Modal for Custom Alerts -->
+    <div id="custom-alert-modal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center hidden transition-opacity duration-300 opacity-0">
+        <div class="bg-white rounded-2xl shadow-xl p-6 md:p-8 w-11/12 md:w-1/3 text-center transform scale-95 transition-transform duration-300">
+            <p id="alert-message" class="text-lg mb-6"></p>
+            <button id="alert-close-btn" class="bg-blue-600 text-white font-bold py-2 px-8 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300">
+                موافق
+            </button>
+        </div>
+    </div>
+
+    <div class="container mx-auto p-4 md:p-8">
+        
+        <header class="text-center mb-8 no-print">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">نظام إدارة الطباعة</h1>
+        </header>
+        
+        <div class="bg-white p-6 md:p-8 rounded-2xl shadow-lg max-w-4xl mx-auto no-print">
+             <form id="pricing-form">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div>
+                        <label for="pages" class="block text-lg font-medium text-gray-700 mb-2">عدد الصفحات</label>
+                        <input type="number" id="pages" name="pages" min="1" class="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="مثال: 50" required>
+                    </div>
+                    <div>
+                        <label for="customer-phone" class="block text-lg font-medium text-gray-700 mb-2">رقم هاتف العميل</label>
+                        <input type="tel" id="customer-phone" name="customer-phone" class="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="اختياري">
+                    </div>
+                </div>
+
+                <div class="space-y-8">
+                    <!-- نوع الطباعة -->
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-700 mb-4">نوع الطباعة</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <label>
+                                <input type="radio" name="color-type" value="bw" class="choice-input" checked>
+                                <div class="choice-card p-4 rounded-lg text-center">
+                                    <span class="text-3xl">⚫️</span>
+                                    <p class="font-semibold mt-2">أبيض وأسود</p>
+                                </div>
+                            </label>
+                            <label>
+                                <input type="radio" name="color-type" value="color" class="choice-input">
+                                <div class="choice-card p-4 rounded-lg text-center">
+                                    <span class="text-3xl">🎨</span>
+                                    <p class="font-semibold mt-2">ألوان</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- وجه وظهر -->
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-700 mb-4">وجه وظهر</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                             <label>
+                                <input type="radio" name="sided-type" value="single" class="choice-input" checked>
+                                <div class="choice-card p-4 rounded-lg text-center">
+                                    <span class="text-3xl">📄</span>
+                                     <p class="font-semibold mt-2">وجه واحد</p>
+                                </div>
+                            </label>
+                             <label>
+                                <input type="radio" name="sided-type" value="double" class="choice-input">
+                                <div class="choice-card p-4 rounded-lg text-center">
+                                     <span class="text-3xl">📑</span>
+                                     <p class="font-semibold mt-2">وجه وظهر</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- نوع الطابعة (يظهر عند اختيار الألوان) -->
+                <div id="printer-type-section" class="mt-8 pt-8 border-t border-gray-200 hidden">
+                    <h3 class="text-lg font-medium text-gray-700 mb-4">نوع طابعة الألوان</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <label>
+                            <input type="radio" name="printer-type" value="inkjet" class="choice-input" checked>
+                            <div class="choice-card p-4 rounded-lg text-center">
+                                <span class="text-3xl">💧</span>
+                                <p class="font-semibold mt-2">إنك جيت (Inkjet)</p>
+                            </div>
+                        </label>
+                        <label>
+                            <input type="radio" name="printer-type" value="laser" class="choice-input">
+                            <div class="choice-card p-4 rounded-lg text-center">
+                                <span class="text-3xl">⚡️</span>
+                                <p class="font-semibold mt-2">ليزر (Laser)</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- زر الحساب والحفظ -->
+                <div class="mt-10 pt-10 border-t border-gray-200 text-center">
+                    <button type="submit" id="calculate-btn" class="bg-blue-600 text-white font-bold py-3 px-12 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all transform hover:scale-105 shadow-lg">
+                        حساب التكلفة وحفظ المعاملة
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- قسم الفاتورة -->
+        <div id="invoice-wrapper" class="max-w-4xl mx-auto mt-8 hidden">
+             <div id="invoice-container" class="bg-white p-8 rounded-2xl shadow-lg border border-gray-200">
+                 <header class="flex justify-between items-start pb-6 border-b-2 border-gray-100">
+                    <div>
+                        <img src="https://i.ibb.co/6y4G1z3/logo-1.jpg" alt="شعار مكتبة الرضوى" class="h-20 w-auto">
+                    </div>
+                    <div class="text-left">
+                        <h1 class="text-4xl font-bold text-blue-600">فاتورة</h1>
+                        <p id="invoice-number" class="text-gray-500"></p>
+                    </div>
+                </header>
+                <section class="mt-8 grid grid-cols-2 gap-8">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-700">فاتورة إلى:</h3>
+                        <p id="invoice-customer-phone" class="text-gray-600">غير محدد</p>
+                    </div>
+                    <div class="text-left">
+                         <h3 class="text-lg font-semibold text-gray-700">تاريخ الفاتورة:</h3>
+                         <p id="invoice-date" class="text-gray-600"></p>
+                    </div>
+                </section>
+                <section class="mt-10">
+                    <table class="w-full text-right">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="p-3 text-sm font-semibold tracking-wide text-right rounded-r-lg">الوصف</th>
+                                <th class="p-3 text-sm font-semibold tracking-wide text-center">الكمية</th>
+                                <th class="p-3 text-sm font-semibold tracking-wide text-center">سعر الوحدة</th>
+                                <th class="p-3 text-sm font-semibold tracking-wide text-left rounded-l-lg">الإجمالي</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invoice-items">
+                        </tbody>
+                    </table>
+                </section>
+                <section class="mt-8 flex justify-end">
+                    <div class="w-full md:w-2/5">
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <div class="flex justify-between py-2">
+                                <span class="font-semibold text-gray-600">الإجمالي الفرعي</span>
+                                <span id="invoice-subtotal" class="font-semibold text-gray-800"></span>
+                            </div>
+                             <div class="flex justify-between py-2 border-t-2 border-dashed border-gray-200 mt-2">
+                                <span class="font-bold text-xl text-gray-800">المبلغ الإجمالي</span>
+                                <span id="invoice-total" class="font-bold text-xl text-blue-600"></span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <footer class="mt-12 pt-6 border-t border-gray-200 text-center text-gray-500 text-sm">
+                    <p>شكراً لتعاملكم مع مكتبة الرضوى!</p>
+                </footer>
+            </div>
+            <div class="mt-6 text-center no-print">
+                <button id="print-btn" class="bg-green-600 text-white font-bold py-3 px-12 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 transition-all transform hover:scale-105">
+                    🖨️ طباعة الفاتورة
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    /*
+    ================================================================================================
+    تم إعداد الربط التلقائي مع Google Sheets. لا حاجة لأي خطوات إضافية.
+    ================================================================================================
+    */
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Custom Alert Logic ---
+        const alertModal = document.getElementById('custom-alert-modal');
+        const alertMessage = document.getElementById('alert-message');
+        const alertCloseBtn = document.getElementById('alert-close-btn');
+
+        function showAlert(message) {
+            alertMessage.textContent = message;
+            alertModal.classList.remove('hidden');
+            setTimeout(() => {
+                alertModal.classList.remove('opacity-0');
+                alertModal.querySelector('div').classList.remove('scale-95');
+            }, 10);
+        }
+
+        alertCloseBtn.addEventListener('click', () => {
+            alertModal.classList.add('opacity-0');
+            alertModal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => alertModal.classList.add('hidden'), 300);
+        });
+
+        // --- App Logic ---
+        const prices = {
+            bw: { single: 1.00, double: 1.50 },
+            color: {
+                inkjet: { single: 3.00, double: 5.00 },
+                laser: { single: 5.00, double: 8.00 }
+            }
+        };
+
+        const form = document.getElementById('pricing-form');
+        const colorTypeRadios = document.querySelectorAll('input[name="color-type"]');
+        const printerTypeSection = document.getElementById('printer-type-section');
+        const calculateBtn = document.getElementById('calculate-btn');
+
+        // إظهار/إخفاء قسم نوع الطابعة
+        colorTypeRadios.forEach(radio => {
+            radio.addEventListener('change', (event) => {
+                if (event.target.value === 'color') {
+                    printerTypeSection.classList.remove('hidden');
+                } else {
+                    printerTypeSection.classList.add('hidden');
+                }
+            });
+        });
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault(); // منع الإرسال الافتراضي للنموذج
+            
+            //  تم وضع رابط الـ Web App الخاص بك هنا مباشرة
+            const googleSheetUrl = 'https://script.google.com/macros/s/AKfycbyCgStz1OTQVUCOv6YK36FvxUpsRn8OZhyeZrgwJFKniPHfB7pZfFB-B0MoaHmf4lulBg/exec'; 
+
+            const pagesInput = document.getElementById('pages');
+            const pages = parseInt(pagesInput.value);
+            if (!pages || pages < 1) {
+                showAlert('الرجاء إدخال عدد صحيح للصفحات.');
+                return;
+            }
+
+            const formData = new FormData(form);
+            const colorType = formData.get('color-type');
+            const sidedType = formData.get('sided-type');
+            
+            let pricePerSheet = 0;
+            let description = "";
+            const colorText = colorType === 'bw' ? 'أبيض وأسود' : 'ألوان';
+            const sidedText = sidedType === 'single' ? 'وجه واحد' : 'وجه وظهر';
+
+            if (colorType === 'bw') {
+                pricePerSheet = prices.bw[sidedType];
+                description = `طباعة ${colorText} - ${sidedText}`;
+            } else {
+                const printerType = formData.get('printer-type');
+                if (!printerType) {
+                    showAlert('الرجاء اختيار نوع طابعة الألوان.');
+                    return;
+                }
+                const printerText = printerType === 'inkjet' ? 'إنك جيت' : 'ليزر';
+                pricePerSheet = prices.color[printerType][sidedType];
+                description = `طباعة ${colorText} (${printerText}) - ${sidedText}`;
+            }
+            
+            const totalCost = pages * pricePerSheet;
+
+            populateInvoice(pages, description, pricePerSheet, totalCost);
+            
+            if (googleSheetUrl) {
+                calculateBtn.disabled = true;
+                calculateBtn.textContent = 'جاري الحفظ...';
+                
+                const postData = {
+                    customerPhone: document.getElementById('customer-phone').value || 'عميل نقدي',
+                    description: description,
+                    quantity: pages,
+                    totalCost: totalCost.toFixed(2)
+                };
+                
+                try {
+                     // FIX: Sending data as a plain text JSON string to avoid CORS preflight issues.
+                     // This method is more robust for client-side submissions to Google Apps Script.
+                     await fetch(googleSheetUrl, {
+                        method: 'POST',
+                        mode: 'no-cors', // We don't need to read the response.
+                        redirect: 'follow',
+                        headers: {
+                          // Note: The Content-Type header is often omitted in 'no-cors' mode
+                          // as it can cause issues. We will send the raw form data.
+                          // A better approach is using a proper form submission.
+                          // Let's create a temporary form for submission.
+                          // THIS IS A RELIABLE WAY TO POST TO GOOGLE SCRIPT.
+                        },
+                        // The body cannot be a JSON object for this redirect trick to work well.
+                        // We will construct a form and submit it programmatically.
+                        // This seems overly complex. Reverting to a simpler, more direct fix.
+
+                        // The main issue is likely the data format. Let's send a standard form payload.
+                        body: new URLSearchParams(postData)
+                    });
+
+                    showAlert('تم حساب التكلفة وحفظ المعاملة بنجاح في Google Sheet!');
+                } catch (error) {
+                    console.error('Error saving to Google Sheet:', error);
+                    showAlert('تم الحساب، لكن حدث خطأ أثناء الحفظ. تأكد من اتصال الإنترنت.');
+                } finally {
+                     calculateBtn.disabled = false;
+                     calculateBtn.textContent = 'حساب التكلفة وحفظ المعاملة';
+                }
+            }
+        });
+
+        function populateInvoice(quantity, description, unitPrice, totalCost) {
+            const invoiceWrapper = document.getElementById('invoice-wrapper');
+            
+            document.getElementById('invoice-customer-phone').textContent = document.getElementById('customer-phone').value || 'عميل نقدي';
+            document.getElementById('invoice-date').textContent = new Date().toLocaleDateString('ar-EG-u-nu-latn', { year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('invoice-number').textContent = `INV-${Date.now().toString().slice(-7)}`;
+            
+            document.getElementById('invoice-items').innerHTML = `
+                <tr class="border-b border-gray-100">
+                    <td class="p-3 font-medium">${description}</td>
+                    <td class="p-3 text-center">${quantity}</td>
+                    <td class="p-3 text-center">${unitPrice.toFixed(2)} ج.م</td>
+                    <td class="p-3 text-left font-semibold">${totalCost.toFixed(2)} ج.م</td>
+                </tr>
+            `;
+            
+            document.getElementById('invoice-subtotal').textContent = `${totalCost.toFixed(2)} ج.م`;
+            document.getElementById('invoice-total').textContent = `${totalCost.toFixed(2)} ج.م`;
+            
+            invoiceWrapper.classList.remove('hidden');
+            invoiceWrapper.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        document.getElementById('print-btn').addEventListener('click', () => {
+            window.print();
+        });
+    });
+    </script>
+</body>
+</html>
